@@ -184,7 +184,7 @@ final class UserSettings: ObservableObject {
             "pasteAsPlainText": false,
             "deleteAfterPaste": false,
             "saveScreenshots": true,
-            "mainShortcutKeyCode": 11,   // kVK_ANSI_B
+            "mainShortcutKeyCode": 9,    // kVK_ANSI_V
             "mainShortcutModifiers": 0x0100 | 0x0200, // cmdKey | shiftKey
         ]
         defaults.register(defaults: defaultValues)

@@ -315,7 +315,7 @@ struct ShortcutSettingsTab: View {
             }
 
             Section {
-                Text("ショートカットの変更は現在のバージョンでは設定ファイルの編集が必要です。\nデフォルト: Cmd + Shift + B")
+                Text("ショートカットの変更は現在のバージョンでは設定ファイルの編集が必要です。\nデフォルト: Cmd + Shift + V")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
