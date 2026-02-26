@@ -42,9 +42,24 @@ cat > "$APP_DIR/Info.plist" << PLIST
     <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>MediaClip needs Apple Events access to paste clipboard content into other applications.</string>
 </dict>
 </plist>
 PLIST
+
+# Copy entitlements
+cp MediaClip/Resources/MediaClip.entitlements "$APP_DIR/Resources/"
+
+# Ad-hoc code sign with entitlements
+echo "[2.5/4] Signing app bundle..."
+codesign --force --sign - \
+    --entitlements MediaClip/Resources/MediaClip.entitlements \
+    --timestamp=none \
+    --generate-entitlement-der \
+    "build/MediaClip.app"
+
+echo "  Signature: $(codesign -d --verbose=1 build/MediaClip.app 2>&1 | grep 'Signature')"
 
 # 3. Create DMG
 echo "[3/4] Creating DMG..."
@@ -53,6 +68,50 @@ rm -rf build/dmg_staging
 mkdir -p build/dmg_staging
 cp -R build/MediaClip.app build/dmg_staging/
 ln -s /Applications build/dmg_staging/Applications
+
+# Add install helper script for macOS 15+ Gatekeeper bypass
+cat > build/dmg_staging/Install.command << 'INSTALL_SCRIPT'
+#!/bin/bash
+# MediaClip Installer
+# macOS 15 Sequoia+ ではダウンロードしたアプリの起動に追加手順が必要です。
+# このスクリプトがインストールと Gatekeeper 設定を自動で行います。
+
+set -e
+
+echo ""
+echo "=== MediaClip インストーラー ==="
+echo ""
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_SRC="$SCRIPT_DIR/MediaClip.app"
+APP_DST="/Applications/MediaClip.app"
+
+if [ ! -d "$APP_SRC" ]; then
+    echo "エラー: MediaClip.app が見つかりません。"
+    echo "DMG を開いた状態でこのスクリプトを実行してください。"
+    exit 1
+fi
+
+# Stop running instance if exists
+pkill -x MediaClip 2>/dev/null && sleep 1 || true
+
+echo "MediaClip.app を /Applications にコピーしています..."
+cp -R "$APP_SRC" "$APP_DST"
+
+echo "Gatekeeper 属性を解除しています..."
+xattr -cr "$APP_DST"
+
+echo ""
+echo "インストール完了！MediaClip を起動します..."
+echo ""
+echo "※ 初回起動時に「アクセシビリティ」の許可が求められます。"
+echo "  システム設定 > プライバシーとセキュリティ > アクセシビリティ"
+echo "  で MediaClip を許可してください。"
+echo ""
+
+open "$APP_DST"
+INSTALL_SCRIPT
+chmod +x build/dmg_staging/Install.command
 
 rm -f "build/${DMG_NAME}"
 hdiutil create \
