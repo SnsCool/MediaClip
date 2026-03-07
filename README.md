@@ -1,63 +1,74 @@
+<div align="center">
+
 # MediaClip
 
-macOS用のクリップボードマネージャーです。[Clipy](https://clipy-app.com/)の代替として開発しました。
+[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
+[![macOS](https://img.shields.io/badge/macOS-14.0+-blue.svg)](https://www.apple.com/macos/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-テキストだけでなく、**画像（スクリーンショット）や動画（画面収録）** にも対応しています。
+A modern clipboard manager for macOS — text, images & videos.
 
-## 機能
+Built as a [Clipy](https://clipy-app.com/) alternative with media support.
 
-- クリップボード履歴の自動保存（テキスト・画像・動画）
-- テキストと画像を分類して表示
-- スニペット管理（フォルダ分類対応）
-- グローバルショートカット（Cmd+Shift+V）でどこからでも呼び出し
-- メニューから選択するだけで自動ペースト
-- 画像サムネイルのプレビュー表示
-- 詳細な環境設定（履歴件数、表示形式、除外アプリなど）
+</div>
 
-## 動作要件
+---
 
-- macOS 14 (Sonoma) 以降
+## Features
+
+- **Clipboard History** — Automatically saves text, images (screenshots), and videos (screen recordings)
+- **Smart Categories** — Separate views for text and image history
+- **Snippet Manager** — Organize frequently used text with folders
+- **Global Shortcut** — Access anywhere with `Cmd+Shift+V`
+- **Auto Paste** — Select an item and it pastes instantly into the active app
+- **Image Thumbnails** — Preview images directly in the menu
+- **Customizable** — History size, display format, excluded apps, and more
+
+## Requirements
+
+- macOS 14 (Sonoma) or later
 - Apple Silicon (arm64)
 
-## インストール
+## Installation
 
-### DMGからインストール（推奨）
+### Download (Recommended)
 
-1. [Releases](../../releases) から最新の `MediaClip-vX.X.X.dmg` をダウンロード
-2. DMGを開き、MediaClip.app を Applications フォルダにドラッグ
-3. Applications から MediaClip を起動
-4. **初回起動時**: 「開発元を確認できないため開けません」と表示された場合:
-   - `システム設定` > `プライバシーとセキュリティ` > 下にスクロール > `このまま開く` をクリック
-   - または、MediaClip.app を **右クリック** > `開く` を選択
-5. **アクセシビリティ権限**: 自動ペーストのため、許可を求められたら `システム設定` > `プライバシーとセキュリティ` > `アクセシビリティ` で MediaClip を許可
+1. Download the latest `MediaClip-vX.X.X.dmg` from [Releases](../../releases)
+2. Open the DMG and drag **MediaClip.app** to your Applications folder
+3. Launch MediaClip from Applications
+4. **First launch:** If blocked, right-click the app → select **Open**, or go to `System Settings > Privacy & Security > Open Anyway`
+5. **Accessibility permission:** Grant access at `System Settings > Privacy & Security > Accessibility`
 
-### ソースからビルド
+### Build from Source
 
 ```bash
-git clone https://github.com/SnsCool/MediaClip.git
+git clone https://github.com/mata-ken/MediaClip.git
 cd MediaClip
 bash build.sh
 open build/MediaClip.app
 ```
 
-## 使い方
+## Usage
 
-### 基本操作
+| Action | How |
+|--------|-----|
+| Open menu | Click the **menu bar icon** |
+| Quick access | Press `Cmd+Shift+V` anywhere |
+| Paste an item | Click any history item → auto-pastes |
+| Edit snippets | Menu → `Edit Snippets...` |
+| Settings | Menu → `Preferences...` |
 
-- **メニューバーのアイコン**をクリック → 履歴・スニペットメニューが表示
-- **Cmd+Shift+V** → マウス位置にメニューをポップアップ表示
-- 履歴項目をクリック → 自動的に前のアプリに戻ってペースト
+## Tech Stack
 
-### スニペット
+| Component | Technology |
+|-----------|------------|
+| Language | Swift 5.9 |
+| UI Framework | SwiftUI + AppKit |
+| Architecture | Menu bar app (LSUIElement) |
+| Package Manager | Swift Package Manager |
+| Clipboard | NSPasteboard + CGEvent |
+| Storage | JSON file-based persistence |
 
-- メニューから `スニペットを編集...` で管理画面を開く
-- フォルダを作成してスニペットを整理可能
+## License
 
-### 環境設定
-
-- メニューから `環境設定...` で設定画面を開く
-- 一般、メニュー、対応形式、除外アプリ、ショートカット等を設定可能
-
-## ライセンス
-
-MIT License
+[MIT License](LICENSE)
