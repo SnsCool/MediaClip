@@ -13,6 +13,11 @@ struct SnippetManagerView: View {
     @State private var newFolderName = ""
     @State private var editingContent = ""
     @State private var editingTitle = ""
+    @State private var editingFolderName = ""
+    @State private var renamingItemID: UUID? = nil
+    @State private var renamingText: String = ""
+    @State private var lastSelectedItem: SidebarItem?
+    @State private var lastSelectionTime: Date?
     @State private var expandedFolders: Set<UUID> = []
 
     var body: some View {
@@ -108,18 +113,82 @@ struct SnippetManagerView: View {
                 ) {
                     let snippets = storage.snippetsForFolder(folder.id)
                     ForEach(snippets) { snippet in
-                        Label(snippet.title, systemImage: "doc.text")
+                        if renamingItemID == snippet.id {
+                            SelectableTextField(text: $renamingText, onCommit: {
+                                if !renamingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                    snippet.title = renamingText
+                                    storage.updateSnippet(snippet)
+                                    if case .snippet(let sid) = selection, sid == snippet.id {
+                                        editingTitle = renamingText
+                                    }
+                                }
+                                renamingItemID = nil
+                            }, onCancel: {
+                                renamingItemID = nil
+                            })
+                            .frame(height: 22)
                             .tag(SidebarItem.snippet(snippet.id))
+                        } else {
+                            Label(snippet.title, systemImage: "doc.text")
+                                .tag(SidebarItem.snippet(snippet.id))
+                                .contextMenu {
+                                    Button("名前を変更") {
+                                        renamingItemID = snippet.id
+                                        renamingText = snippet.title
+                                    }
+                                    Divider()
+                                    Button("削除", role: .destructive) {
+                                        storage.deleteSnippet(snippet)
+                                        if case .snippet(let sid) = selection, sid == snippet.id {
+                                            self.selection = nil
+                                        }
+                                    }
+                                }
+                        }
                     }
                 } label: {
-                    Label(folder.name, systemImage: "folder")
-                        .tag(SidebarItem.folder(folder.id))
+                    if renamingItemID == folder.id {
+                        SelectableTextField(text: $renamingText, onCommit: {
+                            if !renamingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                folder.name = renamingText
+                                storage.updateFolder(folder)
+                                if case .folder(let fid) = selection, fid == folder.id {
+                                    editingFolderName = renamingText
+                                }
+                            }
+                            renamingItemID = nil
+                        }, onCancel: {
+                            renamingItemID = nil
+                        })
+                        .frame(height: 22)
+                    } else {
+                        Label(folder.name, systemImage: "folder")
+                            .tag(SidebarItem.folder(folder.id))
+                            .contextMenu {
+                                Button("名前を変更") {
+                                    renamingItemID = folder.id
+                                    renamingText = folder.name
+                                }
+                                Divider()
+                                Button("削除", role: .destructive) {
+                                    storage.deleteFolder(folder)
+                                    if case .folder(let fid) = selection, fid == folder.id {
+                                        self.selection = nil
+                                    }
+                                }
+                            }
+                    }
                 }
             }
         }
         .listStyle(.sidebar)
+        .focusable()
+        .onKeyPress(.return) {
+            handleReturnKeyRename()
+            return .handled
+        }
         .onChange(of: selection) { _, newValue in
-            loadSelection(newValue)
+            handleSelectionChange(newValue)
         }
     }
 
@@ -140,21 +209,36 @@ struct SnippetManagerView: View {
     }
 
     private func folderDetailView(folderID: UUID) -> some View {
-        VStack {
-            Spacer()
+        VStack(spacing: 0) {
             if let folder = storage.folders.first(where: { $0.id == folderID }) {
-                Label(folder.name, systemImage: "folder")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Image(systemName: "folder")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
 
-                Text("スニペット数: \(storage.snippetsForFolder(folderID).count)")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 4)
+                    TextField("フォルダ名", text: $editingFolderName)
+                        .font(.system(size: 14, weight: .bold))
+                        .textFieldStyle(.plain)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .onChange(of: editingFolderName) { _, newValue in
+                    saveCurrentFolder()
+                }
+
+                Divider()
+
+                VStack {
+                    Spacer()
+                    Text("スニペット数: \(storage.snippetsForFolder(folderID).count)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func snippetDetailView(snippetID: UUID) -> some View {
@@ -191,6 +275,53 @@ struct SnippetManagerView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Rename Helpers
+
+    private func handleSelectionChange(_ newValue: SidebarItem?) {
+        // Slow-click detection: if same item selected again within 0.3-1.5s, enter rename
+        if let newValue, newValue == lastSelectedItem,
+           let lastTime = lastSelectionTime {
+            let interval = Date().timeIntervalSince(lastTime)
+            if interval >= 0.3 && interval <= 1.5 {
+                switch newValue {
+                case .snippet(let id):
+                    if let snippet = storage.snippets.first(where: { $0.id == id }) {
+                        renamingItemID = id
+                        renamingText = snippet.title
+                    }
+                case .folder(let id):
+                    if let folder = storage.folders.first(where: { $0.id == id }) {
+                        renamingItemID = id
+                        renamingText = folder.name
+                    }
+                }
+                lastSelectedItem = nil
+                lastSelectionTime = nil
+                return
+            }
+        }
+
+        lastSelectedItem = newValue
+        lastSelectionTime = Date()
+        loadSelection(newValue)
+    }
+
+    private func handleReturnKeyRename() {
+        guard renamingItemID == nil, let currentSelection = selection else { return }
+        switch currentSelection {
+        case .snippet(let id):
+            if let snippet = storage.snippets.first(where: { $0.id == id }) {
+                renamingItemID = id
+                renamingText = snippet.title
+            }
+        case .folder(let id):
+            if let folder = storage.folders.first(where: { $0.id == id }) {
+                renamingItemID = id
+                renamingText = folder.name
+            }
+        }
     }
 
     // MARK: - Actions
@@ -249,10 +380,25 @@ struct SnippetManagerView: View {
 
     private func loadSelection(_ item: SidebarItem?) {
         guard let item else { return }
-        if case .snippet(let snippetID) = item,
-           let snippet = storage.snippets.first(where: { $0.id == snippetID }) {
-            editingTitle = snippet.title
-            editingContent = snippet.content
+        switch item {
+        case .folder(let folderID):
+            if let folder = storage.folders.first(where: { $0.id == folderID }) {
+                editingFolderName = folder.name
+            }
+        case .snippet(let snippetID):
+            if let snippet = storage.snippets.first(where: { $0.id == snippetID }) {
+                editingTitle = snippet.title
+                editingContent = snippet.content
+            }
+        }
+    }
+
+    private func saveCurrentFolder() {
+        if case .folder(let folderID) = selection,
+           let folder = storage.folders.first(where: { $0.id == folderID }),
+           !editingFolderName.isEmpty {
+            folder.name = editingFolderName
+            storage.updateFolder(folder)
         }
     }
 

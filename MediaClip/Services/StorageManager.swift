@@ -157,6 +157,10 @@ final class StorageManager: ObservableObject {
         saveFolders()
     }
 
+    func updateFolder(_ folder: SnippetFolder) {
+        saveFolders()
+    }
+
     func deleteFolder(_ folder: SnippetFolder) {
         // Delete all snippets in folder
         snippets.removeAll { $0.folderID == folder.id }
