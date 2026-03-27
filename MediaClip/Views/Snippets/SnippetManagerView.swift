@@ -160,6 +160,17 @@ struct SnippetManagerView: View {
     private func snippetDetailView(snippetID: UUID) -> some View {
         VStack(spacing: 0) {
             if storage.snippets.first(where: { $0.id == snippetID }) != nil {
+                TextField("Title", text: $editingTitle)
+                    .font(.system(size: 14, weight: .bold))
+                    .textFieldStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .onChange(of: editingTitle) { _, newValue in
+                        saveCurrentSnippet()
+                    }
+
+                Divider()
+
                 TextEditor(text: $editingContent)
                     .font(.system(size: 13, design: .monospaced))
                     .scrollContentBackground(.hidden)
@@ -248,6 +259,7 @@ struct SnippetManagerView: View {
     private func saveCurrentSnippet() {
         if case .snippet(let snippetID) = selection,
            let snippet = storage.snippets.first(where: { $0.id == snippetID }) {
+            snippet.title = editingTitle
             snippet.content = editingContent
             storage.updateSnippet(snippet)
         }
